@@ -82,7 +82,17 @@ export default function SessionDialog({ day, onClose, onSaved }: Props) {
   }
 
   return (
-    <dialog ref={dialogRef} className="sheet" aria-labelledby="session-dialog-title" onClose={onClose}>
+    <dialog
+      ref={dialogRef}
+      className="sheet"
+      aria-labelledby="session-dialog-title"
+      // Escape: let React close it by unmounting. (Not onClose: React's dev-mode double mount
+      // fires a late "close" event that would shut the dialog right after it opens.)
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+    >
       <form className="sheet-form" onSubmit={save}>
         <header className="sheet-head">
           <div>
