@@ -1,0 +1,100 @@
+# Workout Friends
+
+A private app for Christian and Stefan to plan their shared online workouts:
+an exercise library, reusable programs, and a week calendar.
+
+Stack: Vite + React + TypeScript, Supabase (Postgres, magic-link login, row level security, realtime).
+
+## Setup
+
+### 1. Supabase project
+
+1. Create a project at [supabase.com](https://supabase.com). Pick a region between you two (e.g. Frankfurt).
+2. Open **SQL Editor** and run these files in order:
+   1. `supabase/migrations/20260924000000_init.sql`: tables, access rules, realtime
+   2. `supabase/seed.sql`: muscle groups, 52 exercises, 7 programs, the weekly schedule
+   3. `supabase/allowed_users.sql`: **put your two real email addresses in first**
+
+   With the Supabase CLI instead: `supabase link`, then `supabase db push`, then run the seed and allowed-users files.
+3. **Authentication → URL Configuration**
+   - Site URL: `http://localhost:5173` for now (your deployed URL later)
+   - Redirect URLs: add `http://localhost:5173` and, once deployed, your production URL
+4. **Authentication → Providers → Email** should be enabled (it is by default).
+
+### 2. Run the app
+
+```bash
+cp .env.example .env.local   # then fill in URL + anon key from Project Settings → API
+npm install
+npm run dev
+```
+
+Open http://localhost:5173, enter your email, and click the link you receive.
+
+### 3. Deploy (when ready)
+
+Vercel or Netlify, both free for this. Import the GitHub repo, set the two `VITE_SUPABASE_*`
+environment variables, and add the deployed URL to Supabase's redirect URLs.
+`vercel.json` and `public/_redirects` already handle page reloads on deep links.
+
+## How the data is organised
+
+| Layer | Tables | Notes |
+| --- | --- | --- |
+| Library | `exercises`, `exercise_muscle_groups`, `muscle_groups` | Muscle groups are a fixed list of 12. `is_idea` marks the "Experimentarium" exercises. Sets/reps on an exercise are only defaults. |
+| Programs | `programs`, `program_exercises` | Sets, reps or time live on each program entry, so the same exercise can be 3–4 × 12–15 in one program and 3 × 10 in another. Deleting an exercise removes it from all programs. |
+| Calendar | `weekly_schedule`, `session_overrides` | One program per weekday repeats every week. An override changes a single date (another program, or `program_id = null` for a rest day). |
+
+**Times are anchored to Denmark.** `start_time` is Copenhagen wall-clock time (06:00). The app converts it
+for each viewer, so after the clocks change on 25 October Christian's view shows 14:00 instead of 13:00
+without anything being edited. See `src/lib/time.ts` and `src/lib/constants.ts`.
+
+**Access.** Only emails in `allowed_users` can read or write anything; everyone else gets an empty
+database even with a valid login. Add or remove people in the SQL editor.
+
+## What works now
+
+- Magic-link login, members-only check, sign out
+- Week view (mobile: list; desktop: seven columns) with previous/next week and both local times
+- Day view with the program's exercises in order
+- Programs list (scheduled vs not scheduled)
+- Exercise library A–Z with search, and browsing by muscle group
+- Exercise detail (read-only)
+
+## Next steps
+
+1. **Exercise library:** create, edit and delete form (from the mockup), with muscle-group and equipment pickers.
+2. **Program editor:** reorder (`reorderProgram` is ready), edit sets/reps/time, remove entries,
+   add exercises via the muscle-group picker in "pick" mode, choose weekdays.
+3. **Calendar:** "Add" on rest days and "Change program" for a single date (both write `session_overrides`).
+4. **Realtime:** subscribe to table changes so edits appear on the other person's screen straight away.
+5. **Installable app:** add `vite-plugin-pwa` for a home-screen icon.
+
+Optional: `supabase gen types typescript` to generate database types and replace the hand-written
+row shapes in `src/lib/api.ts`.
+
+## Check the imported data
+
+The spreadsheet was cleaned up on import. Worth a quick look together:
+
+- **Muscle groups** were mapped from the mixed Danish/English notes to the 12 tags. Some are judgement calls.
+- **Names** were translated and de-duplicated. The Danish originals are in `notes` where the translation
+  was loose (e.g. Triceps Band Extension = "Triceps elastik", Diagonal Swimmer = "Svømmeren").
+- **Wall Sit** is a timed exercise with no duration set. Add one when you edit it.
+- **"Bukser på rows"** from the Experimentarium sheet wasn't imported because it's unclear what it is.
+- **"Chest Press/chest Flys"** on Thursday became Chest Press. Chest Flys exists as its own exercise.
+
+## Project structure
+
+```
+supabase/
+  migrations/…_init.sql   schema, RLS, realtime
+  seed.sql                data from the spreadsheet
+  allowed_users.sql       who can sign in
+src/
+  lib/                    Supabase client, API calls, types, time zones, formatting
+  auth/                   session handling and login screen
+  components/             layout (tabs / sidebar), icons, shared bits
+  pages/                  Week, Day, Programs, Program editor, Exercises, Muscle browser, Exercise detail
+  styles/global.css       design tokens and responsive layout
+```
