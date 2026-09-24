@@ -1,6 +1,15 @@
 import { supabase } from './supabase';
 import { addDays, isoWeekday } from './time';
-import type { CalendarDay, Dose, Exercise, Program, ProgramSummary } from './types';
+import type {
+  CalendarDay,
+  Dose,
+  Exercise,
+  ExerciseInput,
+  Program,
+  ProgramInput,
+  ProgramSummary,
+  ScheduleSlot,
+} from './types';
 
 /* Row shapes as returned by PostgREST. Regenerate proper types later with
    `supabase gen types typescript` if you want them checked against the database. */
@@ -67,8 +76,77 @@ export async function getExercise(id: string): Promise<Exercise> {
     .select('*, exercise_muscle_groups(muscle_group)')
     .eq('id', id)
     .single();
-  if (error) throw error;
+  if (error) throw friendlyError(error);
   return toExercise(data as ExerciseRow);
+}
+
+interface ErrorContext {
+  name?: string;
+  kind?: 'exercise' | 'program';
+  migration?: string;
+}
+
+/** Turns database errors into messages a person can act on. */
+function friendlyError(error: { code?: string; message: string }, context: ErrorContext = {}): Error {
+  const thing = context.kind === 'program' ? 'program' : 'exercise';
+  switch (error.code) {
+    case '23505':
+      return new Error(`There's already ${thing === 'program' ? 'a program' : 'an exercise'} called “${context.name}”. Pick another name.`);
+    case '23503':
+      return new Error('One of the exercises was deleted in the meantime. Reload the page and try again.');
+    case '23514':
+      return new Error('One of the numbers is out of range. Check sets and reps.');
+    case 'PGRST202':
+      return new Error(
+        `Saving needs a database update: run supabase/migrations/${context.migration ?? '…'} in the Supabase SQL editor.`,
+      );
+    case 'P0002':
+    case 'PGRST116':
+      return new Error(`This ${thing} no longer exists. It may have been deleted.`);
+    default:
+      return new Error(error.message);
+  }
+}
+
+/** Creates (id = null) or updates an exercise with its muscle groups in one transaction. Returns the id. */
+export async function saveExercise(id: string | null, input: ExerciseInput): Promise<string> {
+  const { data, error } = await supabase.rpc('save_exercise', {
+    p_id: id,
+    p_name: input.name,
+    p_equipment: input.equipment,
+    p_mode: input.mode,
+    p_sets_min: input.setsMin,
+    p_sets_max: input.setsMax,
+    p_reps_min: input.repsMin,
+    p_reps_max: input.repsMax,
+    p_duration_seconds: input.durationSeconds,
+    p_notes: input.notes,
+    p_video_url: input.videoUrl,
+    p_is_idea: input.isIdea,
+    p_muscle_groups: input.muscleGroups,
+  });
+  if (error) throw friendlyError(error, { name: input.name, migration: '20260925000000_save_exercise.sql' });
+  return data as string;
+}
+
+/** Deleting also removes the exercise from every program (on delete cascade). */
+export async function deleteExercise(id: string): Promise<void> {
+  const { error } = await supabase.from('exercises').delete().eq('id', id);
+  if (error) throw friendlyError(error);
+}
+
+/** Programs that use an exercise, so the delete warning can name them. */
+export async function getExerciseUsage(id: string): Promise<{ id: string; name: string }[]> {
+  const { data, error } = await supabase
+    .from('program_exercises')
+    .select('program:programs(id, name)')
+    .eq('exercise_id', id);
+  if (error) throw friendlyError(error);
+  const programs = new Map<string, string>();
+  for (const row of data as unknown as { program: { id: string; name: string } | null }[]) {
+    if (row.program) programs.set(row.program.id, row.program.name);
+  }
+  return [...programs].map(([pid, name]) => ({ id: pid, name })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // ---------------------------------------------------------------------------
@@ -112,7 +190,7 @@ export async function getProgram(id: string): Promise<Program> {
     .eq('id', id)
     .order('position', { referencedTable: 'program_exercises' })
     .single();
-  if (error) throw error;
+  if (error) throw friendlyError(error, { kind: 'program' });
   const row = data as { id: string; name: string; notes: string | null; program_exercises: ProgramEntryRow[] };
   return {
     id: row.id,
@@ -132,12 +210,46 @@ export async function getProgram(id: string): Promise<Program> {
   };
 }
 
-export async function reorderProgram(programId: string, entryIdsInOrder: string[]): Promise<void> {
-  const { error } = await supabase.rpc('reorder_program', {
-    p_program_id: programId,
-    p_entry_ids: entryIdsInOrder,
+/** Saves name, ordered exercises and weekdays in one transaction. Returns the program id. */
+export async function saveProgram(id: string | null, input: ProgramInput): Promise<string> {
+  const { data, error } = await supabase.rpc('save_program', {
+    p_id: id,
+    p_name: input.name,
+    p_entries: input.entries.map((e) => ({
+      exercise_id: e.exerciseId,
+      is_warmup: e.isWarmup,
+      mode: e.mode,
+      sets_min: e.setsMin,
+      sets_max: e.setsMax,
+      reps_min: e.repsMin,
+      reps_max: e.repsMax,
+      duration_seconds: e.durationSeconds,
+    })),
+    p_weekdays: input.weekdays,
   });
-  if (error) throw error;
+  if (error) {
+    throw friendlyError(error, { name: input.name, kind: 'program', migration: '20260926000000_save_program.sql' });
+  }
+  return data as string;
+}
+
+/** Also removes it from the weekly schedule and any one-off calendar changes. */
+export async function deleteProgram(id: string): Promise<void> {
+  const { error } = await supabase.from('programs').delete().eq('id', id);
+  if (error) throw friendlyError(error, { kind: 'program' });
+}
+
+export async function getWeeklySchedule(): Promise<ScheduleSlot[]> {
+  const { data, error } = await supabase
+    .from('weekly_schedule')
+    .select('weekday, program:programs(id, name)')
+    .order('weekday');
+  if (error) throw friendlyError(error);
+  return (data as unknown as { weekday: number; program: { id: string; name: string } }[]).map((s) => ({
+    weekday: s.weekday,
+    programId: s.program.id,
+    programName: s.program.name,
+  }));
 }
 
 // ---------------------------------------------------------------------------

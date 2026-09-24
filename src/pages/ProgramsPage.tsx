@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { listPrograms } from '../lib/api';
 import { useAsync } from '../hooks/useAsync';
 import { PlusIcon } from '../components/Icons';
@@ -9,6 +9,7 @@ const WEEKDAY_SHORT = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function ProgramsPage() {
   const { data, error, loading, reload } = useAsync(listPrograms, []);
+  const notice = (useLocation().state as { notice?: string } | null)?.notice;
   const scheduled = (data ?? [])
     .filter((p) => p.weekdays.length > 0)
     .sort((a, b) => a.weekdays[0] - b.weekdays[0]);
@@ -23,6 +24,12 @@ export default function ProgramsPage() {
           New program
         </Link>
       </header>
+
+      {notice && (
+        <p role="status" className="notice">
+          {notice}
+        </p>
+      )}
 
       {loading && <Loading />}
       {error && <ErrorMessage error={error} onRetry={reload} />}

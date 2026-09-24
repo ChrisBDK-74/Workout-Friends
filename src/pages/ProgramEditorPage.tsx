@@ -1,23 +1,44 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
+import { getProgram, getWeeklySchedule, listExercises } from '../lib/api';
+import { useAsync } from '../hooks/useAsync';
 import { ChevronLeft } from '../components/Icons';
-import { NotBuiltYet } from '../components/Status';
+import { ErrorMessage, Loading } from '../components/Status';
+import ProgramEditor from '../components/ProgramEditor';
 
+/** /programs/new and /programs/:id. Pass { from } in location state to return somewhere else than /programs. */
 export default function ProgramEditorPage() {
-  const { id } = useParams();
+  const { id = 'new' } = useParams();
+  const isNew = id === 'new';
+  const returnTo = (useLocation().state as { from?: string } | null)?.from ?? '/programs';
+
+  const { data, error, loading, reload } = useAsync(async () => {
+    const [program, schedule, exercises] = await Promise.all([
+      isNew ? Promise.resolve(null) : getProgram(id),
+      getWeeklySchedule(),
+      listExercises(),
+    ]);
+    return { program, schedule, exercises };
+  }, [id]);
+
   return (
-    <>
-      <div className="page page-top">
-        <Link to="/programs" className="back-link">
+    <section className="page page-editor">
+      {(loading || error) && (
+        <Link to={returnTo} className="back-link">
           <ChevronLeft />
-          Programs
+          Back
         </Link>
-      </div>
-      <NotBuiltYet title={id === 'new' ? 'New program' : 'Edit program'} step="step 3 (programs)">
-        <p className="muted small">
-          Plan: reorder with drag and drop (saved with <code>reorderProgram</code>), edit sets and reps per
-          exercise, add exercises through the muscle-group picker, and choose weekdays.
-        </p>
-      </NotBuiltYet>
-    </>
+      )}
+      {loading && <Loading />}
+      {error && <ErrorMessage error={error} onRetry={reload} />}
+      {data && !loading && (
+        <ProgramEditor
+          key={id}
+          program={data.program}
+          schedule={data.schedule}
+          exercises={data.exercises}
+          returnTo={returnTo}
+        />
+      )}
+    </section>
   );
 }

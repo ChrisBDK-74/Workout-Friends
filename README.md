@@ -14,6 +14,8 @@ Stack: Vite + React + TypeScript, Supabase (Postgres, magic-link login, row leve
    1. `supabase/migrations/20260924000000_init.sql`: tables, access rules, realtime
    2. `supabase/seed.sql`: muscle groups, 52 exercises, 7 programs, the weekly schedule
    3. `supabase/allowed_users.sql`: **put your two real email addresses in first**
+   4. `supabase/migrations/20260925000000_save_exercise.sql`: saving exercises (step 2)
+   5. `supabase/migrations/20260926000000_save_program.sql`: saving programs (step 3)
 
    With the Supabase CLI instead: `supabase link`, then `supabase db push`, then run the seed and allowed-users files.
 3. **Authentication → URL Configuration**
@@ -31,11 +33,18 @@ npm run dev
 
 Open http://localhost:5173, enter your email, and click the link you receive.
 
-### 3. Deploy (when ready)
+### 3. Deploy to Fly.io
 
-Vercel or Netlify, both free for this. Import the GitHub repo, set the two `VITE_SUPABASE_*`
-environment variables, and add the deployed URL to Supabase's redirect URLs.
-`vercel.json` and `public/_redirects` already handle page reloads on deep links.
+The app is built into a small container: Node builds it, nginx serves it (`Dockerfile`, `nginx.conf`).
+
+1. Install flyctl and sign in: `fly auth login`
+2. In `fly.toml`, set `app` to your Fly app's name. The Supabase URL and publishable key are build
+   arguments there; they're baked into the app at build time, so changing them needs a new deploy.
+3. `fly deploy`
+4. In Supabase, **Authentication → URL Configuration**: set Site URL to `https://<your-app>.fly.dev`
+   and add it to Redirect URLs (keep `http://localhost:5173` for local development).
+
+The machine sleeps when unused and wakes on the next visit, so it costs close to nothing.
 
 ## How the data is organised
 
@@ -59,13 +68,14 @@ database even with a valid login. Add or remove people in the SQL editor.
 - Day view with the program's exercises in order
 - Programs list (scheduled vs not scheduled)
 - Exercise library A–Z with search, and browsing by muscle group
-- Exercise detail (read-only)
+- Create, edit and delete exercises (muscle groups, equipment, default sets/reps or time, notes, video link, idea flag)
+- Program editor: rename, drag to reorder (mouse, touch or keyboard), sets/reps/time per exercise, warm-up flag,
+  add exercises by muscle group or name, choose weekdays, delete. Everything saves in one go.
 
 ## Next steps
 
-1. **Exercise library:** create, edit and delete form (from the mockup), with muscle-group and equipment pickers.
-2. **Program editor:** reorder (`reorderProgram` is ready), edit sets/reps/time, remove entries,
-   add exercises via the muscle-group picker in "pick" mode, choose weekdays.
+1. ~~**Exercise library:** create, edit and delete~~ done
+2. ~~**Program editor**~~ done
 3. **Calendar:** "Add" on rest days and "Change program" for a single date (both write `session_overrides`).
 4. **Realtime:** subscribe to table changes so edits appear on the other person's screen straight away.
 5. **Installable app:** add `vite-plugin-pwa` for a home-screen icon.

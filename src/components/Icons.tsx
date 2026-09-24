@@ -56,3 +56,13 @@ export const SearchIcon = () => (
     <path d="M20 20l-3.5-3.5" />
   </Icon>
 );
+export const GripIcon = () => (
+  <Icon strokeWidth={3}>
+    <path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01" />
+  </Icon>
+);
+export const CloseIcon = () => (
+  <Icon strokeWidth={2}>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </Icon>
+);

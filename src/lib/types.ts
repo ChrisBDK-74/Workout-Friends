@@ -48,3 +48,24 @@ export interface CalendarDay {
   program: Pick<ProgramSummary, 'id' | 'name' | 'exerciseCount'> | null;
   isOverride: boolean;
 }
+
+/** What the exercise form saves: everything except the id. */
+export type ExerciseInput = Omit<Exercise, 'id'>;
+
+export interface ProgramEntryInput extends Dose {
+  exerciseId: string;
+  isWarmup: boolean;
+}
+
+/** What the program editor saves in one go. */
+export interface ProgramInput {
+  name: string;
+  entries: ProgramEntryInput[]; // in order
+  weekdays: number[];
+}
+
+export interface ScheduleSlot {
+  weekday: number;
+  programId: string;
+  programName: string;
+}

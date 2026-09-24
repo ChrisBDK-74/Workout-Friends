@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { listExercises } from '../lib/api';
 import { EQUIPMENT_LABELS, muscleGroupName } from '../lib/constants';
 import { useAsync } from '../hooks/useAsync';
@@ -10,6 +10,7 @@ import ExerciseViewSwitch from '../components/ExerciseViewSwitch';
 export default function ExercisesPage() {
   const { data, error, loading, reload } = useAsync(listExercises, []);
   const [query, setQuery] = useState('');
+  const notice = (useLocation().state as { notice?: string } | null)?.notice;
 
   const sections = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -31,6 +32,12 @@ export default function ExercisesPage() {
           New exercise
         </Link>
       </header>
+
+      {notice && (
+        <p role="status" className="notice">
+          {notice}
+        </p>
+      )}
 
       <label className="search">
         <SearchIcon />

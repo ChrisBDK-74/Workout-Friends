@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { getDay, getProgram } from '../lib/api';
 import { formatDate, todayIso } from '../lib/time';
 import { formatDose } from '../lib/format';
@@ -10,6 +10,7 @@ import SessionTime from '../components/SessionTime';
 
 export default function DayPage() {
   const { date = todayIso() } = useParams();
+  const notice = (useLocation().state as { notice?: string } | null)?.notice;
   const { data, error, loading, reload } = useAsync(async () => {
     const day = await getDay(date);
     const program = day.program ? await getProgram(day.program.id) : null;
@@ -24,6 +25,11 @@ export default function DayPage() {
         <ChevronLeft />
         Week
       </Link>
+      {notice && (
+        <p role="status" className="notice">
+          {notice}
+        </p>
+      )}
       <p className="eyebrow">
         {formatDate(date, { weekday: 'long', day: 'numeric', month: 'long' })}
         {date === todayIso() && ' · Today'}
@@ -43,7 +49,11 @@ export default function DayPage() {
             </p>
           )}
           <div className="row">
-            <Link to={`/programs/${data.program.id}`} className="button button-dark">
+            <Link
+              to={`/programs/${data.program.id}`}
+              state={{ from: `/day/${date}` }}
+              className="button button-dark"
+            >
               Edit program
             </Link>
             {/* TODO step 4: swap the program for this date only */}
