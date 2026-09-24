@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Outlet, RouterProvider, createBrowserRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthProvider';
 import LoginPage from './auth/LoginPage';
 import { supabaseConfigured } from './lib/supabase';
@@ -11,13 +11,33 @@ import ExercisesPage from './pages/ExercisesPage';
 import MuscleBrowserPage from './pages/MuscleBrowserPage';
 import ExerciseEditPage from './pages/ExerciseEditPage';
 
+// A data router (rather than <BrowserRouter>) so editors can block navigation with unsaved changes.
+const router = createBrowserRouter([
+  {
+    element: <Gate />,
+    children: [
+      {
+        element: <AppLayout />,
+        children: [
+          { index: true, element: <WeekPage /> },
+          { path: 'day/:date', element: <DayPage /> },
+          { path: 'programs', element: <ProgramsPage /> },
+          { path: 'programs/:id', element: <ProgramEditorPage /> },
+          { path: 'exercises', element: <ExercisesPage /> },
+          { path: 'exercises/by-muscle', element: <MuscleBrowserPage /> },
+          { path: 'exercises/:id', element: <ExerciseEditPage /> },
+          { path: '*', element: <Navigate to="/" replace /> },
+        ],
+      },
+    ],
+  },
+]);
+
 export default function App() {
   if (!supabaseConfigured) return <SetupNeeded />;
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Gate />
-      </BrowserRouter>
+      <RouterProvider router={router} />
     </AuthProvider>
   );
 }
@@ -46,20 +66,7 @@ function Gate() {
     );
   }
 
-  return (
-    <Routes>
-      <Route element={<AppLayout />}>
-        <Route index element={<WeekPage />} />
-        <Route path="day/:date" element={<DayPage />} />
-        <Route path="programs" element={<ProgramsPage />} />
-        <Route path="programs/:id" element={<ProgramEditorPage />} />
-        <Route path="exercises" element={<ExercisesPage />} />
-        <Route path="exercises/by-muscle" element={<MuscleBrowserPage />} />
-        <Route path="exercises/:id" element={<ExerciseEditPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
-  );
+  return <Outlet />;
 }
 
 function SetupNeeded() {

@@ -10,6 +10,7 @@ import {
   type ExerciseFormValues,
 } from '../lib/exerciseForm';
 import type { Equipment, Exercise } from '../lib/types';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 
 interface Props {
   exercise: Exercise | null; // null = new exercise
@@ -30,11 +31,13 @@ export default function ExerciseForm({ exercise, usage, initialGroups = [] }: Pr
     const v = valuesFromExercise(exercise);
     return exercise ? v : { ...v, muscleGroups: initialGroups };
   });
+  const [initialValues] = useState(() => JSON.stringify(values));
   const [errors, setErrors] = useState<ExerciseFormErrors>({});
   const [saveError, setSaveError] = useState<string>();
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  useUnsavedChangesGuard(JSON.stringify(values) !== initialValues && !saving && !deleting);
 
   function set<K extends keyof ExerciseFormValues>(key: K, value: ExerciseFormValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));

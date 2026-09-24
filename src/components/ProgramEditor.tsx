@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   DndContext,
@@ -24,6 +24,7 @@ import {
   type ProgramErrors,
 } from '../lib/programForm';
 import type { Exercise, Program, ScheduleSlot } from '../lib/types';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import MusclePicker from './MusclePicker';
 import ProgramEntryRow from './ProgramEntryRow';
 import { CloseIcon, PlusIcon } from './Icons';
@@ -67,13 +68,7 @@ export default function ProgramEditor({ program, schedule, exercises, returnTo }
 
   const dirty = draftSignature(draft) !== savedSignature;
 
-  // Warn before closing the tab with unsaved changes
-  useEffect(() => {
-    if (!dirty || saving || deleting) return;
-    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
-    window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
-  }, [dirty, saving, deleting]);
+  useUnsavedChangesGuard(dirty && !saving && !deleting);
 
   // Phone: the picker is a full-screen panel. Move focus into it, Escape closes it.
   useEffect(() => {
@@ -202,16 +197,12 @@ export default function ProgramEditor({ program, schedule, exercises, returnTo }
     }
   }
 
-  function cancel(event: MouseEvent) {
-    if (dirty && !window.confirm('Leave without saving your changes?')) event.preventDefault();
-  }
-
   let number = 0;
 
   return (
     <form className="form" onSubmit={submit} noValidate>
       <div className="form-bar">
-        <Link to={returnTo} className="form-bar-cancel" onClick={cancel}>
+        <Link to={returnTo} className="form-bar-cancel">
           Cancel
         </Link>
         <h1 className="form-bar-title">{program ? 'Edit program' : 'New program'}</h1>

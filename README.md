@@ -71,12 +71,15 @@ database even with a valid login. Add or remove people in the SQL editor.
 - Create, edit and delete exercises (muscle groups, equipment, default sets/reps or time, notes, video link, idea flag)
 - Program editor: rename, drag to reorder (mouse, touch or keyboard), sets/reps/time per exercise, warm-up flag,
   add exercises by muscle group or name, choose weekdays, delete. Everything saves in one go.
+- One-off calendar changes: add a program to a rest day, swap the program or start time for a single date,
+  make a date a rest day, or put it back on the weekly schedule. Changed days are tagged in the week view.
+- Editors ask before you leave with unsaved changes (in-app navigation, back button, closing the tab).
 
 ## Next steps
 
 1. ~~**Exercise library:** create, edit and delete~~ done
 2. ~~**Program editor**~~ done
-3. **Calendar:** "Add" on rest days and "Change program" for a single date (both write `session_overrides`).
+3. ~~**Calendar:** one-off changes~~ done
 4. **Realtime:** subscribe to table changes so edits appear on the other person's screen straight away.
 5. **Installable app:** add `vite-plugin-pwa` for a home-screen icon.
 

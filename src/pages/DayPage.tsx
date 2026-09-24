@@ -1,22 +1,28 @@
+import { useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { getDay, getProgram } from '../lib/api';
 import { formatDate, todayIso } from '../lib/time';
 import { formatDose } from '../lib/format';
 import { muscleGroupName } from '../lib/constants';
 import { useAsync } from '../hooks/useAsync';
-import { ChevronLeft } from '../components/Icons';
+import { ChevronLeft, PlusIcon } from '../components/Icons';
 import { ErrorMessage, Loading } from '../components/Status';
 import SessionTime from '../components/SessionTime';
+import SessionDialog from '../components/SessionDialog';
 
 export default function DayPage() {
   const { date = todayIso() } = useParams();
-  const notice = (useLocation().state as { notice?: string } | null)?.notice;
+  const locationNotice = (useLocation().state as { notice?: string } | null)?.notice;
+  const [notice, setNotice] = useState(locationNotice);
+  const [changing, setChanging] = useState(false);
+
   const { data, error, loading, reload } = useAsync(async () => {
     const day = await getDay(date);
     const program = day.program ? await getProgram(day.program.id) : null;
     return { day, program };
   }, [date]);
 
+  const day = data?.day;
   let number = 0;
 
   return (
@@ -25,20 +31,36 @@ export default function DayPage() {
         <ChevronLeft />
         Week
       </Link>
-      {notice && (
-        <p role="status" className="notice">
-          {notice}
-        </p>
-      )}
+
+      <p role="status" className={notice ? 'notice' : 'visually-hidden'}>
+        {notice}
+      </p>
+
       <p className="eyebrow">
         {formatDate(date, { weekday: 'long', day: 'numeric', month: 'long' })}
         {date === todayIso() && ' · Today'}
       </p>
 
-      {loading && <Loading />}
+      {loading && !data && <Loading />}
       {error && <ErrorMessage error={error} onRetry={reload} />}
 
-      {data && !data.program && <h1 className="display-title">Rest day</h1>}
+      {day?.isOverride && (
+        <p className="muted small">
+          Changed for this date only. Usually {day.regularProgram ? day.regularProgram.name : 'a rest day'}.
+        </p>
+      )}
+
+      {data && !data.program && (
+        <>
+          <h1 className="display-title display-title-large">Rest day</h1>
+          <div className="row">
+            <button type="button" className="button button-primary" onClick={() => setChanging(true)}>
+              <PlusIcon />
+              Add a program
+            </button>
+          </div>
+        </>
+      )}
 
       {data?.program && (
         <>
@@ -56,9 +78,8 @@ export default function DayPage() {
             >
               Edit program
             </Link>
-            {/* TODO step 4: swap the program for this date only */}
-            <button type="button" className="button">
-              Change program
+            <button type="button" className="button" onClick={() => setChanging(true)}>
+              Change for this date
             </button>
           </div>
 
@@ -82,7 +103,22 @@ export default function DayPage() {
               );
             })}
           </ol>
+          {data.program.entries.length === 0 && (
+            <p className="placeholder">This program has no exercises yet. Use Edit program to add some.</p>
+          )}
         </>
+      )}
+
+      {changing && day && (
+        <SessionDialog
+          day={day}
+          onClose={() => setChanging(false)}
+          onSaved={(message) => {
+            setChanging(false);
+            setNotice(message);
+            reload();
+          }}
+        />
       )}
     </section>
   );

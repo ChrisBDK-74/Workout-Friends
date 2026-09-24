@@ -46,7 +46,11 @@ export interface CalendarDay {
   weekday: number; // ISO, 1 = Monday
   startTime: string | null; // HH:MM Denmark time, null on rest days
   program: Pick<ProgramSummary, 'id' | 'name' | 'exerciseCount'> | null;
+  /** True when this date was changed on its own (differs from the weekly schedule) */
   isOverride: boolean;
+  /** What the weekly schedule says for this weekday, for "Back to the regular schedule" */
+  regularProgram: Pick<ProgramSummary, 'id' | 'name' | 'exerciseCount'> | null;
+  regularStartTime: string | null;
 }
 
 /** What the exercise form saves: everything except the id. */

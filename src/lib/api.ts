@@ -256,6 +256,8 @@ export async function getWeeklySchedule(): Promise<ScheduleSlot[]> {
 // Calendar
 // ---------------------------------------------------------------------------
 
+const DEFAULT_START_TIME = '06:00';
+
 type ProgramRef = { id: string; name: string; program_exercises: { count: number }[] } | null;
 
 const toProgramRef = (p: ProgramRef) =>
@@ -274,8 +276,8 @@ export async function getWeek(weekStart: string): Promise<CalendarDay[]> {
       .gte('session_date', weekStart)
       .lte('session_date', weekEnd),
   ]);
-  if (schedule.error) throw schedule.error;
-  if (overrides.error) throw overrides.error;
+  if (schedule.error) throw friendlyError(schedule.error);
+  if (overrides.error) throw friendlyError(overrides.error);
 
   const byWeekday = new Map(
     (schedule.data as unknown as { weekday: number; start_time: string; program: ProgramRef }[]).map((s) => [
@@ -294,6 +296,8 @@ export async function getWeek(weekStart: string): Promise<CalendarDay[]> {
     const weekday = isoWeekday(date);
     const regular = byWeekday.get(weekday);
     const override = byDate.get(date);
+    const regularProgram = toProgramRef(regular?.program ?? null);
+    const regularStartTime = regular ? regular.start_time.slice(0, 5) : null;
 
     if (override) {
       const program = toProgramRef(override.program);
@@ -301,16 +305,20 @@ export async function getWeek(weekStart: string): Promise<CalendarDay[]> {
         date,
         weekday,
         program,
-        startTime: program ? (override.start_time ?? regular?.start_time ?? '06:00').slice(0, 5) : null,
+        startTime: program ? (override.start_time ?? regular?.start_time ?? DEFAULT_START_TIME).slice(0, 5) : null,
         isOverride: true,
+        regularProgram,
+        regularStartTime,
       };
     }
     return {
       date,
       weekday,
-      program: toProgramRef(regular?.program ?? null),
-      startTime: regular ? regular.start_time.slice(0, 5) : null,
+      program: regularProgram,
+      startTime: regularStartTime,
       isOverride: false,
+      regularProgram,
+      regularStartTime,
     };
   });
 }
@@ -320,4 +328,21 @@ export async function getDay(date: string): Promise<CalendarDay> {
   const day = week.find((d) => d.date === date);
   if (!day) throw new Error(`No calendar entry for ${date}`);
   return day;
+}
+
+/**
+ * Changes a single date. programId null = rest day that date. startTime is Denmark time (HH:MM),
+ * or null to keep the weekly schedule's time.
+ */
+export async function setSessionOverride(date: string, programId: string | null, startTime: string | null) {
+  const { error } = await supabase
+    .from('session_overrides')
+    .upsert({ session_date: date, program_id: programId, start_time: startTime }, { onConflict: 'session_date' });
+  if (error) throw friendlyError(error, { kind: 'program' });
+}
+
+/** Puts a date back on the weekly schedule. */
+export async function clearSessionOverride(date: string) {
+  const { error } = await supabase.from('session_overrides').delete().eq('session_date', date);
+  if (error) throw friendlyError(error);
 }
