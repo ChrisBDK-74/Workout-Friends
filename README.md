@@ -16,12 +16,16 @@ Stack: Vite + React + TypeScript, Supabase (Postgres, magic-link login, row leve
    3. `supabase/allowed_users.sql`: **put your two real email addresses in first**
    4. `supabase/migrations/20260925000000_save_exercise.sql`: saving exercises (step 2)
    5. `supabase/migrations/20260926000000_save_program.sql`: saving programs (step 3)
+   6. `supabase/migrations/20260927000000_categories_and_clear_week.sql`: editable categories, clearing weeks
 
    With the Supabase CLI instead: `supabase link`, then `supabase db push`, then run the seed and allowed-users files.
 3. **Authentication → URL Configuration**
    - Site URL: `http://localhost:5173` for now (your deployed URL later)
    - Redirect URLs: add `http://localhost:5173` and, once deployed, your production URL
 4. **Authentication → Providers → Email** should be enabled (it is by default).
+5. **Authentication → Sign In / Providers**: turn off **Allow new users to sign up**. Only you two have
+   accounts, and the app never creates new ones. (Data is members-only via RLS anyway; this just
+   keeps strangers from creating empty logins.)
 
 ### 2. Run the app
 
@@ -31,7 +35,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173, enter your email, and click the link you receive.
+Open http://localhost:5173. The first time, use "Email me a sign-in link", then set a password under Account.
 
 ### 3. Deploy to Fly.io
 
@@ -50,7 +54,7 @@ The machine sleeps when unused and wakes on the next visit, so it costs close to
 
 | Layer | Tables | Notes |
 | --- | --- | --- |
-| Library | `exercises`, `exercise_muscle_groups`, `muscle_groups` | Muscle groups are a fixed list of 12. `is_idea` marks the "Experimentarium" exercises. Sets/reps on an exercise are only defaults. |
+| Library | `exercises`, `exercise_muscle_groups`, `muscle_groups`, `equipment_types` | Muscle groups and equipment are editable on the Categories screen. `is_idea` marks the "Experimentarium" exercises. Sets/reps on an exercise are only defaults. |
 | Programs | `programs`, `program_exercises` | Sets, reps or time live on each program entry, so the same exercise can be 3–4 × 12–15 in one program and 3 × 10 in another. Deleting an exercise removes it from all programs. |
 | Calendar | `weekly_schedule`, `session_overrides` | One program per weekday repeats every week. An override changes a single date (another program, or `program_id = null` for a rest day). |
 
@@ -74,6 +78,13 @@ database even with a valid login. Add or remove people in the SQL editor.
 - One-off calendar changes: add a program to a rest day, swap the program or start time for a single date,
   make a date a rest day, or put it back on the weekly schedule. Changed days are tagged in the week view.
 - Editors ask before you leave with unsaved changes (in-app navigation, back button, closing the tab).
+- Exercise library by equipment, and a Categories screen to add, rename and delete muscle groups and
+  equipment types (deleting equipment moves its exercises to another type).
+- Installable app (manifest, icons, service worker) with a "new version" prompt.
+- Sign in with email and password (set it under Account). "Email me a sign-in link" is the backup for a
+  forgotten password.
+- Clear week: empty one week, or the whole weekly schedule, then build a new week from the calendar
+  ("Every Monday" in the day dialog sets the weekly schedule directly).
 
 ## Next steps
 
@@ -81,7 +92,7 @@ database even with a valid login. Add or remove people in the SQL editor.
 2. ~~**Program editor**~~ done
 3. ~~**Calendar:** one-off changes~~ done
 4. **Realtime:** subscribe to table changes so edits appear on the other person's screen straight away.
-5. **Installable app:** add `vite-plugin-pwa` for a home-screen icon.
+5. ~~**Installable app**~~ done
 
 Optional: `supabase gen types typescript` to generate database types and replace the hand-written
 row shapes in `src/lib/api.ts`.

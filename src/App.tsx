@@ -12,6 +12,7 @@ import ExercisesPage from './pages/ExercisesPage';
 import MuscleBrowserPage from './pages/MuscleBrowserPage';
 import EquipmentBrowserPage from './pages/EquipmentBrowserPage';
 import CategoriesPage from './pages/CategoriesPage';
+import AccountPage from './pages/AccountPage';
 import ExerciseEditPage from './pages/ExerciseEditPage';
 
 // A data router (rather than <BrowserRouter>) so editors can block navigation with unsaved changes.
@@ -31,6 +32,7 @@ const router = createBrowserRouter([
           { path: 'exercises/by-equipment', element: <EquipmentBrowserPage /> },
           { path: 'exercises/categories', element: <CategoriesPage /> },
           { path: 'exercises/:id', element: <ExerciseEditPage /> },
+          { path: 'account', element: <AccountPage /> },
           { path: '*', element: <Navigate to="/" replace /> },
         ],
       },

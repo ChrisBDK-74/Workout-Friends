@@ -1734,3 +1734,70 @@ select.input-small {
 .login-links {
   justify-content: space-between;
 }
+
+/* ---------- Password sign-in ---------- */
+
+.password-wrap {
+  position: relative;
+  display: flex;
+}
+
+.password-wrap .input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 52px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.password-toggle[aria-pressed='true'] {
+  color: var(--accent);
+}
+
+.login-backup {
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.login-backup p {
+  margin: 0;
+}
+
+.nudge {
+  max-width: 1200px;
+  margin: calc(16px + env(safe-area-inset-top, 0px)) 16px 0;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  flex-wrap: wrap;
+  border-radius: var(--radius-l);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 500;
+}
+
+.button-small-solid {
+  min-height: 40px;
+}
+
+@media (min-width: 960px) {
+  .nudge {
+    margin: 24px 40px 0;
+  }
+}
