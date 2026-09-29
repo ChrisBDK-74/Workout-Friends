@@ -3,7 +3,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import { getDay, getProgram } from '../lib/api';
 import { formatDate, todayIso } from '../lib/time';
 import { formatDose } from '../lib/format';
-import { muscleGroupName } from '../lib/constants';
+import { useMuscleList } from '../components/CategoriesProvider';
 import { useAsync } from '../hooks/useAsync';
 import { ChevronLeft, PlusIcon } from '../components/Icons';
 import { ErrorMessage, Loading } from '../components/Status';
@@ -15,6 +15,7 @@ export default function DayPage() {
   const locationNotice = (useLocation().state as { notice?: string } | null)?.notice;
   const [notice, setNotice] = useState(locationNotice);
   const [changing, setChanging] = useState(false);
+  const muscleList = useMuscleList();
 
   const { data, error, loading, reload } = useAsync(async () => {
     const day = await getDay(date);
@@ -95,7 +96,7 @@ export default function DayPage() {
                     <span className="entry-name">{entry.exercise.name}</span>
                     <span className="muted small">
                       {entry.isWarmup && 'Warm-up · '}
-                      {entry.exercise.muscleGroups.map(muscleGroupName).join(', ')}
+                      {muscleList(entry.exercise.muscleGroups)}
                     </span>
                   </span>
                   <span className="entry-dose">{formatDose(entry)}</span>

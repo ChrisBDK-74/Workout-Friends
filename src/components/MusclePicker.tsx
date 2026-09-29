@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { EQUIPMENT_LABELS, MUSCLE_GROUPS, muscleGroupName } from '../lib/constants';
+import { useCategories } from './CategoriesProvider';
 import type { Exercise } from '../lib/types';
 import { SearchIcon } from './Icons';
 
@@ -24,6 +24,7 @@ export default function MusclePicker({
   alreadyAdded,
   resultsAction,
 }: Props) {
+  const { muscleGroups, muscleGroupName, equipmentName } = useCategories();
   const [selected, setSelected] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   const pickMode = Boolean(onTogglePick);
@@ -55,7 +56,7 @@ export default function MusclePicker({
           <input type="search" placeholder="Search by name" value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
         <div className="chip-grid" role="group" aria-label="Muscle groups">
-          {MUSCLE_GROUPS.map((g) => (
+          {muscleGroups.map((g) => (
             <button
               key={g.slug}
               type="button"
@@ -95,7 +96,7 @@ export default function MusclePicker({
                       <Link to={`/exercises/${e.id}`} className="list-card">
                         {tags}
                         {e.isIdea && <span className="pill">Idea</span>}
-                        <span className="tag">{EQUIPMENT_LABELS[e.equipment]}</span>
+                        <span className="tag">{equipmentName(e.equipment)}</span>
                       </Link>
                     </li>
                   );

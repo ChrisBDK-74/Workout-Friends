@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { listExercises } from '../lib/api';
-import { muscleGroupName } from '../lib/constants';
+import { useCategories } from '../components/CategoriesProvider';
 import { useAsync } from '../hooks/useAsync';
 import { ErrorMessage, Loading } from '../components/Status';
 import ExerciseViewSwitch from '../components/ExerciseViewSwitch';
@@ -8,6 +8,7 @@ import MusclePicker from '../components/MusclePicker';
 
 export default function MuscleBrowserPage() {
   const { data, error, loading, reload } = useAsync(listExercises, []);
+  const { muscleGroupName } = useCategories();
 
   return (
     <section className="page">

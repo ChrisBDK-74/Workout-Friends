@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight, PlusIcon } from '../components/Icons';
 import { ErrorMessage, Loading } from '../components/Status';
 import SessionTime from '../components/SessionTime';
 import SessionDialog from '../components/SessionDialog';
+import ClearWeekDialog from '../components/ClearWeekDialog';
 
 export default function WeekPage() {
   const today = todayIso();
@@ -15,6 +16,7 @@ export default function WeekPage() {
   const { data: days, error, loading, reload } = useAsync(() => getWeek(weekStart), [weekStart]);
   const [editing, setEditing] = useState<CalendarDay | null>(null);
   const [notice, setNotice] = useState<string>();
+  const [clearing, setClearing] = useState(false);
 
   function changeWeek(offset: number) {
     setNotice(undefined);
@@ -29,6 +31,11 @@ export default function WeekPage() {
           <h1 className="display-title">{formatWeekRange(weekStart)}</h1>
         </div>
         <div className="row">
+          {days && (
+            <button type="button" className="button" onClick={() => setClearing(true)}>
+              Clear week
+            </button>
+          )}
           {weekStart !== startOfWeek(today) && (
             <button type="button" className="button" onClick={() => changeWeek(startOfWeekOffset(weekStart, today))}>
               This week
@@ -97,6 +104,19 @@ export default function WeekPage() {
             );
           })}
         </ol>
+      )}
+
+      {clearing && days && (
+        <ClearWeekDialog
+          weekStart={weekStart}
+          days={days}
+          onClose={() => setClearing(false)}
+          onDone={(message) => {
+            setClearing(false);
+            setNotice(message);
+            reload();
+          }}
+        />
       )}
 
       {editing && (

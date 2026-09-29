@@ -1,14 +1,16 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { clearSessionOverride, listPrograms, setSessionOverride } from '../lib/api';
+import { useState, type FormEvent } from 'react';
+import { clearSessionOverride, listPrograms, setSessionOverride, setWeeklySlot } from '../lib/api';
 import { PEOPLE } from '../lib/constants';
 import { formatDate, formatTime, zonedToInstant } from '../lib/time';
 import type { CalendarDay } from '../lib/types';
 import { useAsync } from '../hooks/useAsync';
+import { useModalDialog } from '../hooks/useModalDialog';
 import { CloseIcon } from './Icons';
 import { ErrorMessage, Loading } from './Status';
 
 const REST = 'rest';
 const WEEKDAY_PLURAL = ['', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays', 'Sundays'];
+const WEEKDAY = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 interface Props {
   day: CalendarDay;
@@ -17,28 +19,18 @@ interface Props {
   onSaved: (message: string) => void;
 }
 
-/** Changes the program (or start time) for one date. The weekly schedule is left alone. */
+/** Changes the program (or start time) for one date, or for that weekday every week. */
 export default function SessionDialog({ day, onClose, onSaved }: Props) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const dialogRef = useModalDialog();
   const { data: programs, error, loading, reload } = useAsync(listPrograms, []);
   const [choice, setChoice] = useState(day.program?.id ?? REST);
   const [time, setTime] = useState(day.startTime ?? day.regularStartTime ?? '06:00');
+  const [repeat, setRepeat] = useState<'once' | 'weekly'>('once');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>();
 
   const dateLabel = formatDate(day.date, { weekday: 'long', day: 'numeric', month: 'long' });
   const regularLabel = day.regularProgram ? day.regularProgram.name : 'a rest day';
-
-  // Open as a modal on mount; give focus back to whatever opened it when done
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    const opener = document.activeElement as HTMLElement | null;
-    dialog?.showModal();
-    return () => {
-      dialog?.close();
-      opener?.focus();
-    };
-  }, []);
 
   const timeIsValid = /^\d{2}:\d{2}$/.test(time);
   const otherZones = timeIsValid
@@ -67,6 +59,18 @@ export default function SessionDialog({ day, onClose, onSaved }: Props) {
       return;
     }
     const programName = programs?.find((p) => p.id === programId)?.name ?? 'the program';
+    const weekday = WEEKDAY[day.weekday];
+
+    if (repeat === 'weekly') {
+      // Change the weekly schedule, and drop any one-off change on this date so it follows it
+      return run(
+        async () => {
+          await setWeeklySlot(day.weekday, programId, timeIsValid ? time : '06:00');
+          if (day.isOverride) await clearSessionOverride(day.date);
+        },
+        programId ? `${programName} is now on every ${weekday}.` : `${WEEKDAY_PLURAL[day.weekday]} are now rest days.`,
+      );
+    }
     const sameAsRegular =
       programId === (day.regularProgram?.id ?? null) && (programId === null || time === day.regularStartTime);
 
@@ -99,7 +103,11 @@ export default function SessionDialog({ day, onClose, onSaved }: Props) {
             <h2 id="session-dialog-title" className="sheet-title">
               {dateLabel}
             </h2>
-            <p className="muted small">Only this date changes. The weekly schedule stays the same.</p>
+            <p className="muted small">
+              {repeat === 'once'
+                ? 'Only this date changes. The weekly schedule stays the same.'
+                : `Changes the weekly schedule for every ${WEEKDAY[day.weekday]}.`}
+            </p>
           </div>
           <button type="button" className="icon-button-plain" aria-label="Close" onClick={onClose}>
             <CloseIcon />
@@ -109,6 +117,27 @@ export default function SessionDialog({ day, onClose, onSaved }: Props) {
         <div className="sheet-body">
           {loading && <Loading />}
           {error && <ErrorMessage error={error} onRetry={reload} />}
+
+          {programs && (
+            <fieldset className="field">
+              <legend className="field-label">Repeat</legend>
+              <div className="choice-group choice-group-segmented">
+                <label className="choice">
+                  <input type="radio" name="repeat" checked={repeat === 'once'} onChange={() => setRepeat('once')} />
+                  <span>Only this date</span>
+                </label>
+                <label className="choice">
+                  <input
+                    type="radio"
+                    name="repeat"
+                    checked={repeat === 'weekly'}
+                    onChange={() => setRepeat('weekly')}
+                  />
+                  <span>Every {WEEKDAY[day.weekday]}</span>
+                </label>
+              </div>
+            </fieldset>
+          )}
 
           {programs && (
             <fieldset className="field">
@@ -194,7 +223,7 @@ export default function SessionDialog({ day, onClose, onSaved }: Props) {
               Cancel
             </button>
             <button type="submit" className="button button-primary" disabled={saving || !programs}>
-              {saving ? 'Saving…' : 'Save for this date'}
+              {saving ? 'Saving…' : repeat === 'once' ? 'Save for this date' : `Save for every ${WEEKDAY[day.weekday]}`}
             </button>
           </div>
         </footer>

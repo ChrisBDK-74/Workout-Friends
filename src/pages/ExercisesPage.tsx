@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { listExercises } from '../lib/api';
-import { EQUIPMENT_LABELS, muscleGroupName } from '../lib/constants';
+import { useCategories } from '../components/CategoriesProvider';
 import { useAsync } from '../hooks/useAsync';
 import { PlusIcon, SearchIcon } from '../components/Icons';
 import { ErrorMessage, Loading } from '../components/Status';
@@ -9,6 +9,7 @@ import ExerciseViewSwitch from '../components/ExerciseViewSwitch';
 
 export default function ExercisesPage() {
   const { data, error, loading, reload } = useAsync(listExercises, []);
+  const { muscleGroupName, equipmentName } = useCategories();
   const [query, setQuery] = useState('');
   const notice = (useLocation().state as { notice?: string } | null)?.notice;
 
@@ -63,7 +64,7 @@ export default function ExercisesPage() {
                       <span className="muted small">{e.muscleGroups.map(muscleGroupName).join(', ')}</span>
                     </span>
                     {e.isIdea && <span className="pill">Idea</span>}
-                    <span className="tag">{EQUIPMENT_LABELS[e.equipment]}</span>
+                    <span className="tag">{equipmentName(e.equipment)}</span>
                   </Link>
                 </li>
               ))}

@@ -1,4 +1,15 @@
-export type Equipment = 'bodyweight' | 'dumbbell' | 'kettlebell' | 'band' | 'ball' | 'other';
+/** Slug of a row in equipment_types (editable on the Categories screen) */
+export type Equipment = string;
+
+export type CategoryKind = 'muscle' | 'equipment';
+
+export interface Category {
+  slug: string;
+  name: string;
+  sortOrder: number;
+  /** How many exercises use it */
+  usage: number;
+}
 export type DoseMode = 'reps' | 'time';
 
 export interface Dose {

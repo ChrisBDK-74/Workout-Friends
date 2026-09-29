@@ -2,6 +2,8 @@ import { supabase } from './supabase';
 import { addDays, isoWeekday } from './time';
 import type {
   CalendarDay,
+  Category,
+  CategoryKind,
   Dose,
   Exercise,
   ExerciseInput,
@@ -345,4 +347,100 @@ export async function setSessionOverride(date: string, programId: string | null,
 export async function clearSessionOverride(date: string) {
   const { error } = await supabase.from('session_overrides').delete().eq('session_date', date);
   if (error) throw friendlyError(error);
+}
+
+// ---------------------------------------------------------------------------
+// Categories (muscle groups and equipment types)
+// ---------------------------------------------------------------------------
+
+const CATEGORY_TABLE: Record<CategoryKind, string> = { muscle: 'muscle_groups', equipment: 'equipment_types' };
+
+export async function listCategories(): Promise<{ muscle: Category[]; equipment: Category[] }> {
+  const [muscle, equipment] = await Promise.all([
+    supabase.from('muscle_groups').select('slug, name, sort_order, exercise_muscle_groups(count)').order('sort_order'),
+    supabase.from('equipment_types').select('slug, name, sort_order, exercises(count)').order('sort_order'),
+  ]);
+  if (muscle.error) throw categoryError(muscle.error);
+  if (equipment.error) throw categoryError(equipment.error);
+  type Row = { slug: string; name: string; sort_order: number } & Record<string, unknown>;
+  const toCategory = (countKey: string) => (r: Row) => ({
+    slug: r.slug,
+    name: r.name,
+    sortOrder: r.sort_order,
+    usage: (r[countKey] as { count: number }[] | undefined)?.[0]?.count ?? 0,
+  });
+  return {
+    muscle: (muscle.data as Row[]).map(toCategory('exercise_muscle_groups')),
+    equipment: (equipment.data as Row[]).map(toCategory('exercises')),
+  };
+}
+
+function categoryError(error: { code?: string; message: string }, name?: string): Error {
+  if (error.code === '23505') return new Error(`“${name}” already exists.`);
+  if (error.code === '42P01' || error.code === 'PGRST205' || error.code === 'PGRST202') {
+    return new Error(
+      'Categories need a database update: run supabase/migrations/20260927000000_categories_and_clear_week.sql in the Supabase SQL editor.',
+    );
+  }
+  return friendlyError(error);
+}
+
+export async function addCategory(kind: CategoryKind, slug: string, name: string, sortOrder: number) {
+  const { error } = await supabase.from(CATEGORY_TABLE[kind]).insert({ slug, name: name.trim(), sort_order: sortOrder });
+  if (error) throw categoryError(error, name.trim());
+}
+
+/** Only the display name changes; the slug stays, so exercises keep their links. */
+export async function renameCategory(kind: CategoryKind, slug: string, name: string) {
+  const { error } = await supabase.from(CATEGORY_TABLE[kind]).update({ name: name.trim() }).eq('slug', slug);
+  if (error) throw categoryError(error, name.trim());
+}
+
+/** Also removes the muscle group from every exercise that had it. */
+export async function deleteMuscleGroup(slug: string) {
+  const { error } = await supabase.from('muscle_groups').delete().eq('slug', slug);
+  if (error) throw categoryError(error);
+}
+
+/** Moves the exercises that use it to another equipment type, then deletes it. */
+export async function deleteEquipmentType(slug: string, moveTo: string | null) {
+  const { error } = await supabase.rpc('delete_equipment_type', { p_slug: slug, p_move_to: moveTo });
+  if (error) throw categoryError(error);
+}
+
+// ---------------------------------------------------------------------------
+// Clearing and planning whole weeks
+// ---------------------------------------------------------------------------
+
+/** Makes every date in the list a rest day, for those dates only. */
+export async function clearDates(dates: string[]) {
+  const { error } = await supabase
+    .from('session_overrides')
+    .upsert(
+      dates.map((d) => ({ session_date: d, program_id: null, start_time: null })),
+      { onConflict: 'session_date' },
+    );
+  if (error) throw friendlyError(error);
+}
+
+/** Removes all one-off changes between two dates, so they follow the weekly schedule again. */
+export async function resetDates(from: string, to: string) {
+  const { error } = await supabase.from('session_overrides').delete().gte('session_date', from).lte('session_date', to);
+  if (error) throw friendlyError(error);
+}
+
+/** Empties the weekly schedule and removes one-off changes from `from` onwards. Programs are kept. */
+export async function clearWeeklySchedule(from: string) {
+  const { error } = await supabase.rpc('clear_weekly_schedule', { p_from: from });
+  if (error) throw categoryError(error);
+}
+
+/** Sets (or with programId null, empties) a weekday in the weekly schedule. Time is Denmark time. */
+export async function setWeeklySlot(weekday: number, programId: string | null, startTime: string) {
+  const { error } = programId
+    ? await supabase
+        .from('weekly_schedule')
+        .upsert({ weekday, program_id: programId, start_time: startTime }, { onConflict: 'weekday' })
+    : await supabase.from('weekly_schedule').delete().eq('weekday', weekday);
+  if (error) throw friendlyError(error, { kind: 'program' });
 }

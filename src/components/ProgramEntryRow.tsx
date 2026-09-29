@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { muscleGroupName } from '../lib/constants';
+import { useMuscleList } from './CategoriesProvider';
 import type { EntryDraft, EntryErrors, EntryField } from '../lib/programForm';
 import { CloseIcon, GripIcon } from './Icons';
 
@@ -13,6 +13,7 @@ interface Props {
 }
 
 export default function ProgramEntryRow({ entry, number, errors = {}, onChange, onRemove }: Props) {
+  const muscleList = useMuscleList();
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: entry.key,
   });
@@ -47,7 +48,7 @@ export default function ProgramEntryRow({ entry, number, errors = {}, onChange, 
           </span>
           <span className="entry-body">
             <span className="entry-name">{entry.name}</span>
-            <span className="muted small">{entry.muscleGroups.map(muscleGroupName).join(', ')}</span>
+            <span className="muted small">{muscleList(entry.muscleGroups)}</span>
           </span>
         </div>
 

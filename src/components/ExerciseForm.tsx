@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { deleteExercise, saveExercise } from '../lib/api';
-import { EQUIPMENT_LABELS, MUSCLE_GROUPS } from '../lib/constants';
+import { useCategories } from './CategoriesProvider';
 import {
   validateExercise,
   valuesFromExercise,
@@ -9,7 +9,7 @@ import {
   type ExerciseFormField,
   type ExerciseFormValues,
 } from '../lib/exerciseForm';
-import type { Equipment, Exercise } from '../lib/types';
+import type { Exercise } from '../lib/types';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 
 interface Props {
@@ -27,9 +27,12 @@ function listNames(names: string[]): string {
 
 export default function ExerciseForm({ exercise, usage, initialGroups = [] }: Props) {
   const navigate = useNavigate();
+  const { muscleGroups, equipment, reload: reloadCategories } = useCategories();
   const [values, setValues] = useState<ExerciseFormValues>(() => {
     const v = valuesFromExercise(exercise);
-    return exercise ? v : { ...v, muscleGroups: initialGroups };
+    // New exercise: start on bodyweight if it still exists, otherwise the first equipment type
+    const startEquipment = equipment.some((e) => e.slug === v.equipment) ? v.equipment : (equipment[0]?.slug ?? v.equipment);
+    return exercise ? v : { ...v, equipment: startEquipment, muscleGroups: initialGroups };
   });
   const [initialValues] = useState(() => JSON.stringify(values));
   const [errors, setErrors] = useState<ExerciseFormErrors>({});
@@ -66,6 +69,7 @@ export default function ExerciseForm({ exercise, usage, initialGroups = [] }: Pr
     setSaveError(undefined);
     try {
       await saveExercise(exercise?.id ?? null, input);
+      reloadCategories(); // usage counts on the Categories screen
       navigate('/exercises', { state: { notice: `Saved ${input.name}.` } });
     } catch (err) {
       setSaveError((err as Error).message);
@@ -79,6 +83,7 @@ export default function ExerciseForm({ exercise, usage, initialGroups = [] }: Pr
     setSaveError(undefined);
     try {
       await deleteExercise(exercise.id);
+      reloadCategories();
       navigate('/exercises', { replace: true, state: { notice: `Deleted ${exercise.name}.` } });
     } catch (err) {
       setSaveError((err as Error).message);
@@ -135,7 +140,7 @@ export default function ExerciseForm({ exercise, usage, initialGroups = [] }: Pr
       <fieldset className="field">
         <legend className="field-label">Muscle groups</legend>
         <div className="chip-wrap">
-          {MUSCLE_GROUPS.map((g) => (
+          {muscleGroups.map((g) => (
             <button
               key={g.slug}
               type="button"
@@ -152,16 +157,16 @@ export default function ExerciseForm({ exercise, usage, initialGroups = [] }: Pr
       <fieldset className="field">
         <legend className="field-label">Equipment</legend>
         <div className="choice-group">
-          {(Object.entries(EQUIPMENT_LABELS) as [Equipment, string][]).map(([value, label]) => (
-            <label key={value} className="choice">
+          {equipment.map((item) => (
+            <label key={item.slug} className="choice">
               <input
                 type="radio"
                 name="equipment"
-                value={value}
-                checked={values.equipment === value}
-                onChange={() => set('equipment', value)}
+                value={item.slug}
+                checked={values.equipment === item.slug}
+                onChange={() => set('equipment', item.slug)}
               />
-              <span>{label}</span>
+              <span>{item.name}</span>
             </label>
           ))}
         </div>

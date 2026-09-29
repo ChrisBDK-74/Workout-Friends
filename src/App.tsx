@@ -3,12 +3,15 @@ import { AuthProvider, useAuth } from './auth/AuthProvider';
 import LoginPage from './auth/LoginPage';
 import { supabaseConfigured } from './lib/supabase';
 import AppLayout from './components/AppLayout';
+import UpdatePrompt from './components/UpdatePrompt';
 import WeekPage from './pages/WeekPage';
 import DayPage from './pages/DayPage';
 import ProgramsPage from './pages/ProgramsPage';
 import ProgramEditorPage from './pages/ProgramEditorPage';
 import ExercisesPage from './pages/ExercisesPage';
 import MuscleBrowserPage from './pages/MuscleBrowserPage';
+import EquipmentBrowserPage from './pages/EquipmentBrowserPage';
+import CategoriesPage from './pages/CategoriesPage';
 import ExerciseEditPage from './pages/ExerciseEditPage';
 
 // A data router (rather than <BrowserRouter>) so editors can block navigation with unsaved changes.
@@ -25,6 +28,8 @@ const router = createBrowserRouter([
           { path: 'programs/:id', element: <ProgramEditorPage /> },
           { path: 'exercises', element: <ExercisesPage /> },
           { path: 'exercises/by-muscle', element: <MuscleBrowserPage /> },
+          { path: 'exercises/by-equipment', element: <EquipmentBrowserPage /> },
+          { path: 'exercises/categories', element: <CategoriesPage /> },
           { path: 'exercises/:id', element: <ExerciseEditPage /> },
           { path: '*', element: <Navigate to="/" replace /> },
         ],
@@ -38,6 +43,7 @@ export default function App() {
   return (
     <AuthProvider>
       <RouterProvider router={router} />
+      <UpdatePrompt />
     </AuthProvider>
   );
 }

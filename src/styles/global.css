@@ -1589,3 +1589,148 @@ select.input-small {
     align-self: flex-start;
   }
 }
+
+/* ---------- Equipment view ---------- */
+
+.segmented-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 480px;
+}
+
+.letter-count {
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.chip-round .chip-count {
+  margin-left: 6px;
+}
+
+.show-all {
+  min-height: 40px;
+  padding: 0 6px;
+}
+
+/* ---------- Categories ---------- */
+
+.view-row {
+  display: flex;
+  align-items: center;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+}
+
+.view-row .segmented {
+  flex: 1 1 320px;
+}
+
+.view-row-link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.section-heading {
+  margin: 8px 0 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.category-row {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.category-view {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.row-action {
+  min-height: 44px;
+  padding: 0 8px;
+  font-size: 0.875rem;
+}
+
+.row-action-danger {
+  color: var(--danger);
+}
+
+.add-row {
+  display: flex;
+  gap: 8px;
+}
+
+.add-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------- Clear week ---------- */
+
+.option-row-tall {
+  align-items: flex-start;
+  padding: 12px;
+}
+
+.option-row-tall input {
+  margin-top: 2px;
+}
+
+/* ---------- Installed app ---------- */
+
+.update-bar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px) + 16px);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 12px 12px 16px;
+  border-radius: var(--radius-l);
+  background: var(--ink);
+  color: #fff;
+  box-shadow: 0 10px 30px rgb(28 25 23 / 0.25);
+  font-size: 0.9375rem;
+}
+
+.button-small-light {
+  background: transparent;
+  border-color: rgb(255 255 255 / 0.35);
+  color: #fff;
+}
+
+@media (min-width: 960px) {
+  .update-bar {
+    left: auto;
+    right: 24px;
+    bottom: 24px;
+    max-width: 440px;
+  }
+}
+
+.login-icon {
+  border-radius: 14px;
+}
+
+.input-code {
+  font-size: 1.5rem;
+  letter-spacing: 0.3em;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.login-links {
+  justify-content: space-between;
+}
